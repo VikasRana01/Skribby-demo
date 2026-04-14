@@ -4,8 +4,8 @@
   "description": "Skribby bot joins Zoom + AI meeting summary demo",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node api.js && node server.js",
+    "dev": "node api.js && nodemon server.js",
     "setup": "node src/db/migrate.js"
   },
   "dependencies": {
