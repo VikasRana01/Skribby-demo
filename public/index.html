@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SkribbyMeet — AI Meeting Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060709;
+  --s1:#0c0e12;
+  --s2:#111318;
+  --s3:#161a21;
+  --border:#1c2029;
+  --border2:#242b36;
+  --text:#dde1ea;
+  --muted:#5a6072;
+  --muted2:#8891a4;
+  --cyan:#00e5cc;
+  --blue:#3b82f6;
+  --purple:#a855f7;
+  --green:#22c55e;
+  --red:#ef4444;
+  --amber:#f59e0b;
+  --r:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* Noise */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+
+/* Ambient blobs */
+.amb{position:fixed;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:0}
+.a1{width:700px;height:500px;background:radial-gradient(circle,rgba(0,229,204,.07),transparent 70%);top:-200px;right:-150px}
+.a2{width:500px;height:500px;background:radial-gradient(circle,rgba(168,85,247,.06),transparent 70%);bottom:-150px;left:-100px}
+.a3{width:300px;height:300px;background:radial-gradient(circle,rgba(59,130,246,.05),transparent 70%);top:50%;left:40%}
+
+/* ── AUTH ──────────────────────────────────────────── */
+#authWrap{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.auth-outer{width:100%;max-width:400px}
+.brand{text-align:center;margin-bottom:40px}
+.brand-mark{width:56px;height:56px;background:linear-gradient(135deg,var(--cyan),var(--blue));border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 40px rgba(0,229,204,.2)}
+.brand h1{font-family:'Cabinet Grotesk',sans-serif;font-size:36px;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,#fff 40%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.brand p{color:var(--muted2);font-size:14px;margin-top:8px}
+.acard{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:28px;backdrop-filter:blur(20px)}
+.atabs{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:24px;gap:3px}
+.atab{flex:1;padding:8px;border:none;background:none;color:var(--muted2);font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all .2s}
+.atab.on{background:var(--s2);color:var(--text)}
+.fl{margin-bottom:14px}
+.fl label{display:block;font-size:11px;font-weight:600;color:var(--muted2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px}
+.fl input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 13px;border-radius:9px;font-family:'Instrument Sans',sans-serif;font-size:14px;outline:none;transition:border .2s}
+.fl input:focus{border-color:var(--cyan)}
+.fl input::placeholder{color:var(--muted)}
+.abtn{width:100%;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;border:none;padding:12px;border-radius:10px;font-family:'Cabinet Grotesk',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;margin-top:4px;letter-spacing:-.2px}
+.abtn:hover{opacity:.9;transform:translateY(-1px)}
+.aerr{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
+
+/* ── DASHBOARD ──────────────────────────────────────── */
+#dash{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:rgba(6,7,9,.85);backdrop-filter:blur(24px);position:sticky;top:0;z-index:100}
+.nav-brand{display:flex;align-items:center;gap:10px;font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.4px}
+.nav-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--cyan),var(--blue));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.nav-r{display:flex;align-items:center;gap:10px}
+.chip{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:99px;padding:5px 13px 5px 5px;font-size:13px;font-weight:500}
+.ava{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.nav-btn{background:none;border:1px solid var(--border2);color:var(--muted2);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;transition:all .2s}
+.nav-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:240px 1fr;flex:1;min-height:0}
+
+/* SIDEBAR */
+.sb{background:var(--s1);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;gap:3px}
+.sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);padding:0 10px;margin:12px 0 5px;font-weight:700}
+.si{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;color:var(--muted2);font-size:13px;font-weight:500;transition:all .2s;border:1px solid transparent}
+.si:hover{background:var(--s2);color:var(--text)}
+.si.on{background:var(--s2);color:var(--text);border-color:var(--border)}
+.si-ic{font-size:15px;width:18px;text-align:center}
+.sb-bot{margin-top:auto;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.sb-bot-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;margin-bottom:8px}
+.dot-wrap{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-g{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-r{background:var(--red)}
+.dot-a{background:var(--amber);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* CONTENT */
+.content{padding:28px 36px;overflow-y:auto}
+.pg{display:none;animation:rise .25s ease}
+.pg.on{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ph{margin-bottom:24px}
+.ph h2{font-family:'Cabinet Grotesk',sans-serif;font-size:26px;font-weight:900;letter-spacing:-.5px}
+.ph p{color:var(--muted2);margin-top:5px;font-size:13px}
+
+/* CARDS */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.kcard{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden}
+.kcard::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,229,204,.03),transparent 60%);pointer-events:none}
+.knum{font-family:'Cabinet Grotesk',sans-serif;font-size:30px;font-weight:900;line-height:1}
+.klbl{color:var(--muted2);font-size:11px;margin-top:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kic{position:absolute;top:14px;right:14px;font-size:24px;opacity:.15}
+
+/* BOT SEND FORM */
+.bot-form{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px}
+.bot-form h3{font-family:'Cabinet Grotesk',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.inp-grp label{font-size:11px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px}
+.inp{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 13px;border-radius:9px;font-family:'Instrument Sans',sans-serif;font-size:14px;outline:none;transition:border .2s}
+.inp:focus{border-color:var(--cyan)}
+.inp::placeholder{color:var(--muted)}
+.btn-send{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;border:none;padding:10px 22px;border-radius:9px;font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:14px;cursor:pointer;transition:all .2s;white-space:nowrap;height:40px;display:flex;align-items:center;gap:7px}
+.btn-send:hover{opacity:.9;transform:translateY(-1px)}
+.btn-send:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.hint{color:var(--muted);font-size:12px;margin-top:8px}
+
+/* SESSION LIST */
+.sec-hd{font-family:'Cabinet Grotesk',sans-serif;font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.sess-list{display:flex;flex-direction:column;gap:9px}
+.sess-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.sess-card:hover{border-color:var(--border2)}
+.sess-ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ic-join{background:rgba(0,229,204,.1)}
+.ic-live{background:rgba(34,197,94,.12);animation:pulse-bg 2s infinite}
+@keyframes pulse-bg{0%,100%{background:rgba(34,197,94,.12)}50%{background:rgba(34,197,94,.2)}}
+.ic-done{background:rgba(59,130,246,.1)}
+.ic-fail{background:rgba(239,68,68,.1)}
+.sess-info{flex:1;min-width:0}
+.sess-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-meta{color:var(--muted2);font-size:12px;margin-top:3px;display:flex;gap:10px}
+.sess-actions{display:flex;gap:7px;align-items:center;flex-shrink:0}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.3px}
+.b-live{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.2)}
+.b-join{background:rgba(245,158,11,.12);color:#fcd34d;border:1px solid rgba(245,158,11,.2)}
+.b-done{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.2)}
+.b-fail{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.b-proc{background:rgba(168,85,247,.12);color:#d8b4fe;border:1px solid rgba(168,85,247,.2)}
+.b-ok{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.2)}
+.b-new{background:rgba(107,114,128,.1);color:var(--muted2);border:1px solid var(--border)}
+
+/* ACTION BTNS */
+.abtn-sm{padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:all .2s;border:1px solid transparent}
+.abtn-stop{background:rgba(239,68,68,.1);color:#fca5a5;border-color:rgba(239,68,68,.25)}
+.abtn-stop:hover{background:rgba(239,68,68,.18)}
+.abtn-sum{background:rgba(0,229,204,.08);color:var(--cyan);border-color:rgba(0,229,204,.2)}
+.abtn-sum:hover{background:rgba(0,229,204,.14)}
+.abtn-ref{background:var(--s2);color:var(--muted2);border-color:var(--border)}
+.abtn-ref:hover{color:var(--text)}
+
+/* SUMMARY CARDS */
+.sum-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
+.sum-card:hover{border-color:var(--border2)}
+.sum-hd{padding:16px 18px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.sum-ic{width:38px;height:38px;background:linear-gradient(135deg,rgba(0,229,204,.15),rgba(59,130,246,.1));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.sum-title{font-weight:600;font-size:14px}
+.sum-date{color:var(--muted2);font-size:11px;margin-top:2px}
+.sum-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sum-play{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
+  background:linear-gradient(145deg, rgba(99,102,241,0.35), rgba(99,102,241,0.12));color:var(--txt);cursor:pointer;font-size:14px;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;
+  box-shadow:0 0 0 1px rgba(99,102,241,0.25);
+}
+.sum-play:hover{filter:brightness(1.12)}
+.sum-play.muted{opacity:0.55;box-shadow:none;background:var(--card2)}
+.sum-media-holder{margin:0 18px 12px;padding:12px;background:var(--card2);border-radius:10px;border:1px solid var(--border)}
+.sum-media-holder video,.sum-media-holder audio{width:100%;max-height:240px}
+.chev{color:var(--muted);transition:transform .25s;font-size:12px}
+.sum-card.open .chev{transform:rotate(180deg)}
+.sum-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border)}
+.sum-card.open .sum-body{display:block}
+.srow{margin-top:14px}
+.srow h4{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--cyan);font-weight:700;margin-bottom:8px}
+.stext{color:#9aa5bb;font-size:13px;line-height:1.75}
+.plist{list-style:none;display:flex;flex-direction:column;gap:5px}
+.plist li{display:flex;gap:7px;font-size:13px;color:#9aa5bb;line-height:1.6}
+.plist li::before{content:'›';color:var(--cyan);flex-shrink:0;font-weight:700}
+.tbox{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px 14px;font-size:12px;color:var(--muted2);line-height:1.8;max-height:180px;overflow-y:auto;margin-top:6px;font-family:monospace;white-space:pre-wrap;word-break:break-word}
+.tbox::-webkit-scrollbar{width:3px}
+.tbox::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty-ic{font-size:44px;margin-bottom:14px;opacity:.4}
+.empty p{font-size:13px;line-height:1.6}
+
+/* ZOOM CONNECT */
+.zconn{background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(0,229,204,.06));border:1px solid rgba(59,130,246,.2);border-radius:18px;padding:28px;text-align:center;margin-bottom:24px}
+.zconn-ic{font-size:44px;margin-bottom:14px}
+.zconn h3{font-family:'Cabinet Grotesk',sans-serif;font-size:20px;font-weight:800}
+.zconn p{color:var(--muted2);margin:8px 0 20px;font-size:13px;max-width:340px;margin-inline:auto}
+.btn-zoom{display:inline-flex;align-items:center;gap:8px;background:#2D8CFF;color:#fff;border:none;padding:11px 24px;border-radius:10px;font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:14px;cursor:pointer;transition:all .2s}
+.btn-zoom:hover{background:#1a7af0;transform:translateY(-1px)}
+.conn-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#86efac;border-radius:99px;padding:5px 14px;font-size:12px;font-weight:600;margin-bottom:14px}
+.btn-disc{background:rgba(239,68,68,.08);color:#fca5a5;border:1px solid rgba(239,68,68,.2);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s}
+.btn-disc:hover{background:rgba(239,68,68,.15)}
+.int-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:22px}
+.int-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px}
+.int-card h4{margin:0 0 10px;font-size:13px;font-weight:800;font-family:'Cabinet Grotesk',sans-serif}
+.int-card p{color:var(--muted2);font-size:12px;margin-bottom:12px;line-height:1.5}
+.btn-gcal{background:#4285f4;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px}
+.btn-gcal:hover{filter:brightness(1.05)}
+.btn-m365{background:#5c2d91;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px}
+.btn-m365:hover{filter:brightness(1.08)}
+.muted-inline{color:var(--muted);font-size:12px}
+
+/* MEETINGS */
+.mtabs{display:flex;gap:3px;background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:3px;margin-bottom:18px;width:fit-content}
+.mtab{padding:7px 14px;border:none;background:none;color:var(--muted2);font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;transition:all .2s}
+.mtab.on{background:var(--s2);color:var(--text)}
+.meet-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;display:flex;align-items:center;gap:13px;transition:all .2s}
+.meet-card:hover{border-color:var(--border2);transform:translateX(2px)}
+.meet-ic{width:40px;height:40px;border-radius:11px;background:rgba(59,130,246,.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.meet-info{flex:1}
+.meet-topic{font-weight:600;font-size:14px}
+.meet-meta{color:var(--muted2);font-size:11px;display:flex;gap:10px;margin-top:3px}
+.btn-bot{background:rgba(0,229,204,.08);color:var(--cyan);border:1px solid rgba(0,229,204,.2);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Cabinet Grotesk',sans-serif;transition:all .2s;white-space:nowrap}
+.btn-bot:hover{background:rgba(0,229,204,.15)}
+
+/* HOW IT WORKS */
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.how-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px 16px;text-align:center;position:relative}
+.how-num{width:28px;height:28px;background:linear-gradient(135deg,var(--cyan),var(--blue));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Cabinet Grotesk',sans-serif;font-weight:900;font-size:13px;color:#000;margin:0 auto 12px}
+.how-ic{font-size:28px;margin-bottom:10px}
+.how-title{font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:13px;margin-bottom:5px}
+.how-desc{color:var(--muted2);font-size:11px;line-height:1.6}
+.how-arrow{position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px;z-index:1}
+
+/* SPINNER + TOAST */
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.15);border-top-color:var(--cyan);border-radius:50%;animation:rot .7s linear infinite;display:inline-block;flex-shrink:0}
+@keyframes rot{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;gap:9px;padding:40px;color:var(--muted2);font-size:13px}
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:7px}
+.ti{background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 16px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:9px;animation:tslide .25s ease;box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:300px}
+@keyframes tslide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.ti.ok{border-color:rgba(34,197,94,.3);color:#86efac}
+.ti.err{border-color:rgba(239,68,68,.3);color:#fca5a5}
+.ti.inf{border-color:rgba(0,229,204,.3);color:var(--cyan)}
+
+/* live recording pulse */
+.rec-pulse{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#86efac;font-weight:600}
+.rec-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:rpulse 1s infinite}
+@keyframes rpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.6}}
+</style>
+</head>
+<body>
+<div class="amb a1"></div>
+<div class="amb a2"></div>
+<div class="amb a3"></div>
+
+<!-- ─── AUTH ─────────────────────────────────── -->
+<div id="authWrap">
+  <div class="auth-outer">
+    <div class="brand">
+      <div class="brand-mark">🤖</div>
+      <h1>SkribbyMeet</h1>
+      <p>Skribby-powered meeting intelligence</p>
+    </div>
+    <div class="acard">
+      <div class="atabs">
+        <button class="atab on" onclick="stab('login')">Sign in</button>
+        <button class="atab" onclick="stab('reg')">Register</button>
+      </div>
+      <div id="aerr" class="aerr"></div>
+      <div id="lf">
+        <div class="fl"><label>Email</label><input id="le" type="email" placeholder="you@company.com"/></div>
+        <div class="fl"><label>Password</label><input id="lp" type="password" placeholder="••••••••"/></div>
+        <button class="abtn" onclick="login()">Sign in →</button>
+      </div>
+      <div id="rf" style="display:none">
+        <div class="fl"><label>Full name</label><input id="rn" placeholder="Jane Smith"/></div>
+        <div class="fl"><label>Email</label><input id="re" type="email" placeholder="you@company.com"/></div>
+        <div class="fl"><label>Password</label><input id="rp" type="password" placeholder="Min 6 chars"/></div>
+        <button class="abtn" onclick="register()">Create account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DASHBOARD ─────────────────────────────── -->
+<div id="dash">
+  <nav>
+    <div class="nav-brand"><div class="nav-icon">🤖</div>SkribbyMeet</div>
+    <div class="nav-r">
+      <div class="chip"><div class="ava" id="nava">?</div><span id="navname">User</span></div>
+      <button class="nav-btn" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sb">
+      <div class="si on" onclick="go('overview',this)"><span class="si-ic">◉</span>Overview</div>
+      <div class="si" onclick="go('bot',this)"><span class="si-ic">🤖</span>Send Bot</div>
+      <div class="si" onclick="go('sessions',this)"><span class="si-ic">📋</span>Bot Sessions</div>
+      <div class="si" onclick="go('summaries',this)"><span class="si-ic">✦</span>Summaries</div>
+      <div class="sb-lbl">Integrations</div>
+      <div class="si" onclick="go('meetings',this)"><span class="si-ic">📅</span>Scheduled meetings</div>
+      <div class="sb-bot">
+        <div class="sb-bot-lbl">Skribby Status</div>
+        <div id="skribbyStatus" class="dot-wrap"><span class="dot dot-a"></span>Connecting...</div>
+      </div>
+    </aside>
+
+    <!-- Pages -->
+    <main class="content">
+
+      <!-- OVERVIEW -->
+      <div id="pg-overview" class="pg on">
+        <div class="ph"><h2>Overview</h2><p>Your meeting intelligence at a glance</p></div>
+        <div class="grid3">
+          <div class="kcard"><div class="knum" id="ov-sess">—</div><div class="klbl">Bot Sessions</div><div class="kic">🤖</div></div>
+          <div class="kcard"><div class="knum" id="ov-sum">—</div><div class="klbl">Summaries</div><div class="kic">✦</div></div>
+          <div class="kcard"><div class="knum" id="ov-live">—</div><div class="klbl">Active Bots</div><div class="kic">🔴</div></div>
+        </div>
+        <div class="sec-hd">Recent Summaries</div>
+        <div id="ov-list"><div class="loading"><div class="spin"></div>Loading...</div></div>
+      </div>
+
+      <!-- SEND BOT -->
+      <div id="pg-bot" class="pg">
+        <div class="ph"><h2>Send Bot to Meeting</h2><p>Paste a Zoom, Google Meet, or Microsoft Teams join link — Skribby joins as a participant</p></div>
+
+        <div class="bot-form">
+          <h3><span>🤖</span> Deploy AI Notetaker</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="inp-grp">
+              <label>Meeting join URL *</label>
+              <input class="inp" id="botUrl" placeholder="Zoom / meet.google.com / teams.microsoft.com"/>
+            </div>
+            <div class="inp-grp">
+              <label>Meeting Title (optional)</label>
+              <input class="inp" id="botTitle" placeholder="e.g. Weekly Standup"/>
+            </div>
+            <div class="inp-grp" style="grid-column:1/-1">
+              <label>Bot joins at (optional)</label>
+              <input class="inp" type="datetime-local" id="botSchedule"/>
+              <div class="hint" style="margin-top:6px">Leave empty to join immediately. Pick a future time to schedule on Skribby (status stays scheduled until then; no cron on this app).</div>
+            </div>
+          </div>
+          <button class="btn-send" id="sendBotBtn" onclick="sendBot()">
+            <span>🚀</span> Send Bot
+          </button>
+          <div class="hint">⚡ The bot will appear in the participant list as "<b id="botNamePreview">AI Notetaker</b>" and start recording automatically</div>
+        </div>
+
+        <!-- How it works -->
+        <div class="sec-hd">How it works</div>
+        <div class="how-grid">
+          <div class="how-card">
+            <div class="how-num">1</div>
+            <div class="how-ic">🔗</div>
+            <div class="how-title">Paste URL</div>
+            <div class="how-desc">Paste Zoom, Google Meet, or Teams link from your invite</div>
+            <div class="how-arrow">›</div>
+          </div>
+          <div class="how-card">
+            <div class="how-num">2</div>
+            <div class="how-ic">🤖</div>
+            <div class="how-title">Bot Joins</div>
+            <div class="how-desc">Skribby bot appears in participant list</div>
+            <div class="how-arrow">›</div>
+          </div>
+          <div class="how-card">
+            <div class="how-num">3</div>
+            <div class="how-ic">🎙️</div>
+            <div class="how-title">Records Live</div>
+            <div class="how-desc">Real-time transcription throughout the call</div>
+            <div class="how-arrow">›</div>
+          </div>
+          <div class="how-card">
+            <div class="how-num">4</div>
+            <div class="how-ic">✨</div>
+            <div class="how-title">AI Summary</div>
+            <div class="how-desc">GPT-4 generates summary + action items</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SESSIONS -->
+      <div id="pg-sessions" class="pg">
+        <div class="ph">
+          <h2>Bot Sessions</h2><p>Track all your Skribby bots — live and past</p>
+        </div>
+        <div id="sessions-list"><div class="loading"><div class="spin"></div>Loading sessions...</div></div>
+      </div>
+
+      <!-- SUMMARIES -->
+      <div id="pg-summaries" class="pg">
+        <div class="ph"><h2>AI Summaries</h2><p>Transcripts and summaries generated from your meetings</p></div>
+        <div id="summaries-list"><div class="loading"><div class="spin"></div>Loading summaries...</div></div>
+      </div>
+
+      <!-- MEETINGS: Zoom + Google Calendar (Meet) + Microsoft Graph (Teams) -->
+      <div id="pg-meetings" class="pg">
+        <div class="ph"><h2>Scheduled meetings</h2><p>Connect Zoom, Google Calendar, and/or Microsoft 365 — then refresh the unified list and send a bot</p></div>
+        <div id="meetings-hub-area"><div class="loading"><div class="spin"></div>Loading integrations...</div></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let tok = localStorage.getItem('sd_tok');
+let me  = JSON.parse(localStorage.getItem('sd_me') || 'null');
+
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+function parseJsonArray(v){
+  if (v == null || v === '') return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    try { const x = JSON.parse(v); return Array.isArray(x) ? x : []; } catch { return []; }
+  }
+  return [];
+}
+
+// ── INIT ─────────────────────────────────────────────
+window.onload = () => {
+  const p = new URLSearchParams(location.search);
+  if (p.get('zoom_connected')) { toast('Zoom connected ✓', 'ok'); cleanUrl(); }
+  if (p.get('zoom_error'))     { toast('Zoom error: ' + p.get('zoom_error'), 'err'); cleanUrl(); }
+  if (p.get('google_connected')) { toast('Google Calendar connected ✓', 'ok'); cleanUrl(); }
+  if (p.get('google_error'))     { toast('Google error: ' + p.get('google_error'), 'err'); cleanUrl(); }
+  if (p.get('microsoft_connected')) { toast('Microsoft connected ✓', 'ok'); cleanUrl(); }
+  if (p.get('microsoft_error'))     { toast('Microsoft error: ' + p.get('microsoft_error'), 'err'); cleanUrl(); }
+  if (tok && me) showDash();
+};
+function cleanUrl(){ history.replaceState({},'',' ') }
+
+// ── AUTH ─────────────────────────────────────────────
+function stab(t){
+  document.querySelectorAll('.atab').forEach((e,i)=>e.classList.toggle('on',(t==='login'&&i===0)||(t==='reg'&&i===1)));
+  document.getElementById('lf').style.display = t==='login'?'':'none';
+  document.getElementById('rf').style.display = t==='reg'?'':'none';
+  document.getElementById('aerr').style.display='none';
+}
+async function login(){
+  const email=v('le'), pass=v('lp');
+  if(!email||!pass) return aerr('Email and password required');
+  try{
+    const r = await req('/auth/login','POST',{email,password:pass},false);
+    save(r); showDash();
+  } catch(e){ aerr(e.message); }
+}
+async function register(){
+  const name=v('rn'), email=v('re'), pass=v('rp');
+  if(!name||!email||!pass) return aerr('All fields required');
+  if(pass.length<6) return aerr('Password min 6 chars');
+  try{
+    const r = await req('/auth/register','POST',{name,email,password:pass},false);
+    save(r); showDash();
+  } catch(e){ aerr(e.message); }
+}
+function save(r){ tok=r.token; me=r.user; localStorage.setItem('sd_tok',tok); localStorage.setItem('sd_me',JSON.stringify(me)); }
+function aerr(m){ const e=document.getElementById('aerr'); e.textContent=m; e.style.display='block'; }
+function logout(){ localStorage.clear(); location.reload(); }
+
+// ── DASHBOARD ─────────────────────────────────────────
+function showDash(){
+  document.getElementById('authWrap').style.display='none';
+  document.getElementById('dash').style.display='flex';
+  document.getElementById('navname').textContent = me.name;
+  document.getElementById('nava').textContent = me.name[0].toUpperCase();
+  document.getElementById('botNamePreview').textContent = 'AI Notetaker';
+  loadOverview();
+  setSkribbyStatus();
+  // Register Skribby bots from connected calendars without opening Scheduled meetings.
+  req('/meetings/upcoming?days=14&auto_schedule=true').catch(() => {});
+}
+
+function go(name, el){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.si').forEach(s=>s.classList.remove('on'));
+  document.getElementById('pg-'+name).classList.add('on');
+  if(el) el.classList.add('on');
+  if(name==='sessions')  loadSessions();
+  if(name==='summaries') loadSummaries();
+  if(name==='meetings')  loadMeetingsHub();
+}
+
+// ── RECALL STATUS ─────────────────────────────────────
+async function setSkribbyStatus(){
+  try {
+    const r = await req('/skribby/sessions');
+    const live = r.sessions.filter(s=>s.status==='in_call').length;
+    const el = document.getElementById('skribbyStatus');
+    el.innerHTML = live>0
+      ? `<span class="dot dot-g"></span>${live} bot${live>1?'s':''} live`
+      : `<span class="dot dot-g"></span>Connected`;
+  } catch(e){
+    document.getElementById('skribbyStatus').innerHTML='<span class="dot dot-r"></span>Error';
+  }
+}
+
+// ── OVERVIEW ──────────────────────────────────────────
+async function loadOverview(){
+  try {
+    const [sr, sesr] = await Promise.all([
+      req('/skribby/summaries?limit=4'),
+      req('/skribby/sessions'),
+    ]);
+    const live = sesr.sessions.filter(s=>s.status==='in_call'||s.status==='joining').length;
+    document.getElementById('ov-sess').textContent = sesr.sessions.length;
+    document.getElementById('ov-sum').textContent  = sr.summaries.length;
+    document.getElementById('ov-live').textContent = live || '0';
+    const el = document.getElementById('ov-list');
+    if(!sr.summaries.length){
+      el.innerHTML=`<div class="empty"><div class="empty-ic">✦</div><p>No summaries yet.<br>Send a bot to a meeting to get started.</p></div>`;
+    } else {
+      el.innerHTML='<div class="sess-list">'+sr.summaries.map((s)=>renderSumCard(s,'ov')).join('')+'</div>';
+    }
+  } catch(e){ console.error('Overview:', e.message); }
+}
+
+// ── SEND BOT ──────────────────────────────────────────
+function allowedMeetingUrl(url){
+  const u = String(url).trim().toLowerCase();
+  return /zoom\.us\/(j\/|my\/|wc\/)/.test(u) || /zoom\.us\/j\?/.test(u)
+    || /meet\.google\.com\//.test(u)
+    || /teams\.microsoft\.com\//.test(u) || /teams\.live\.com\//.test(u);
+}
+async function sendBot(){
+  const url   = v('botUrl').trim();
+  const title = v('botTitle').trim() || 'Meeting';
+  if(!url) return toast('Please enter a meeting join URL', 'err');
+  if(!allowedMeetingUrl(url)) return toast('Use a Zoom, Google Meet, or Teams join link', 'err');
+
+  const schedRaw = v('botSchedule');
+  const body = { meeting_url: url, meeting_title: title };
+  if (schedRaw) {
+    const t = Math.floor(new Date(schedRaw).getTime() / 1000);
+    const now = Math.floor(Date.now() / 1000);
+    if (t > now) body.scheduled_start_time = t;
+  }
+
+  const btn = document.getElementById('sendBotBtn');
+  btn.disabled=true;
+  const isSched = body.scheduled_start_time != null;
+  btn.innerHTML = isSched ? '<div class="spin"></div> Scheduling…' : '<div class="spin"></div> Joining meeting...';
+
+  try {
+    const r = await req('/skribby/bot','POST', body);
+    toast(r.message || (isSched ? `🤖 Bot scheduled for "${title}"` : `🤖 Bot deployed! Joining "${title}" now`), 'ok');
+    document.getElementById('botUrl').value='';
+    document.getElementById('botTitle').value='';
+    const sch = document.getElementById('botSchedule');
+    if (sch) sch.value='';
+    setTimeout(()=>{ go('sessions', document.querySelectorAll('.si')[2]); }, 1000);
+  } catch(e){
+    toast('Error: '+e.message, 'err');
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML='<span>🚀</span> Send Bot';
+  }
+}
+
+// Pressing Enter on URL field
+document.addEventListener('DOMContentLoaded', ()=>{
+  const inp = document.getElementById('botUrl');
+  if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter') sendBot(); });
+});
+
+// ── SESSIONS ──────────────────────────────────────────
+async function loadSessions(){
+  const el = document.getElementById('sessions-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Loading sessions...</div>';
+  try {
+    const r = await req('/skribby/sessions');
+    if(!r.sessions.length){
+      el.innerHTML=`<div class="empty"><div class="empty-ic">🤖</div><p>No bot sessions yet.<br>Go to "Send Bot" and paste a meeting link.</p></div>`;
+      return;
+    }
+    el.innerHTML='<div class="sess-list">'+r.sessions.map(renderSessCard).join('')+'</div>';
+  } catch(e){ el.innerHTML=`<div class="empty"><p>Error: ${e.message}</p></div>`; }
+}
+
+function renderSessCard(s){
+  const isSched = s.status==='scheduled';
+  const isLive  = s.status==='in_call';
+  const isJoin  = (s.status==='joining'||s.status==='created') && !isSched;
+  const isDone  = s.status==='done'||s.status==='call_ended';
+  const isFail  = s.status==='failed';
+
+  const ic   = isSched ? '⏰' : isLive ? '🔴' : isJoin ? '⏳' : isDone ? '✅' : '❌';
+  const icCl = isSched ? 'ic-join' : isLive ? 'ic-live' : isJoin ? 'ic-join' : isDone ? 'ic-done' : 'ic-fail';
+  const badge = isSched
+    ? '<span class="badge b-join">Scheduled</span>'
+    : isLive
+    ? '<span class="badge b-live"><span class="rec-dot"></span>Live</span>'
+    : isJoin ? '<span class="badge b-join">Joining</span>'
+    : isDone ? '<span class="badge b-done">Ended</span>'
+    : '<span class="badge b-fail">Failed</span>';
+
+  const date = new Date(s.created_at).toLocaleString();
+  const schedHint = s.scheduled_join_at
+    ? `<span>⏰ ${new Date(s.scheduled_join_at).toLocaleString()}</span>`
+    : '';
+
+  const actions = isLive || isJoin || isSched
+    ? `<button class="abtn-sm abtn-stop" onclick="stopBot('${s.bot_id}')">Stop Bot</button>`
+    : isDone
+    ? `<button class="abtn-sm abtn-sum" onclick="summarizeBot('${s.bot_id}')">✦ Summarize</button>`
+    : '';
+
+  const sumBadge = s.summary_status==='completed'
+    ? '<span class="badge b-ok">✓ Summary ready</span>'
+    : s.summary_status==='processing'
+    ? '<span class="badge b-proc">⏳ Summarizing</span>'
+    : '';
+
+  return `<div class="sess-card">
+    <div class="sess-ic ${icCl}">${ic}</div>
+    <div class="sess-info">
+      <div class="sess-title">${s.meeting_title||'Zoom Meeting'}</div>
+      <div class="sess-meta">
+        <span>🤖 ${s.bot_name||'AI Notetaker'}</span>
+        <span>📅 ${date}</span>
+        ${schedHint}
+        <span title="${s.bot_id}">ID: ${s.bot_id.slice(0,12)}...</span>
+      </div>
+    </div>
+    <div class="sess-actions">
+      ${sumBadge}${badge}${actions}
+      <button class="abtn-sm abtn-ref" onclick="loadSessions()" title="Refresh">↻</button>
+    </div>
+  </div>`;
+}
+
+async function stopBot(botId){
+  if(!confirm('Remove bot from meeting?')) return;
+  try {
+    await req(`/skribby/bot/${botId}/stop`,'POST');
+    toast('Bot removed from meeting','ok');
+    loadSessions();
+  } catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+async function summarizeBot(botId){
+  try {
+    await req(`/skribby/bot/${botId}/summarize`,'POST');
+    toast('⏳ Generating summary... check Summaries tab shortly','inf');
+    loadSessions();
+  } catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+// ── SUMMARIES ─────────────────────────────────────────
+async function loadSummaries(){
+  const el = document.getElementById('summaries-list');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Loading summaries...</div>';
+  try {
+    const r = await req('/skribby/summaries');
+    if(!r.summaries.length){
+      el.innerHTML=`<div class="empty"><div class="empty-ic">✦</div><p>No summaries yet.<br>After a bot session ends, click "Summarize" to generate one.</p></div>`;
+      return;
+    }
+    el.innerHTML='<div class="sess-list">'+r.summaries.map((s)=>renderSumCard(s,'sl')).join('')+'</div>';
+  } catch(e){ el.innerHTML=`<div class="empty"><p>Error: ${e.message}</p></div>`; }
+}
+
+/**
+ * @param {object} s — summary row from API
+ * @param {string} idPrefix — unique per list (overview vs Summaries) so getElementById is not ambiguous
+ */
+function renderSumCard(s, idPrefix){
+  const p = idPrefix || 'sum';
+  const date = new Date(s.created_at).toLocaleString();
+  const baseKey = s.id != null && s.id !== '' ? `id-${s.id}` : `bs-${s.bot_session_id ?? 'na'}`;
+  const domId = `${p}-${baseKey}`;
+  const transcriptOnly = s.id == null || s.id === '';
+
+  const badge = transcriptOnly
+    ? '<span class="badge b-new">📝 Transcript</span>'
+    : s.status==='completed'
+    ? '<span class="badge b-ok">✓ Complete</span>'
+    : s.status==='processing'
+    ? '<span class="badge b-proc">⏳ Processing</span>'
+    : '<span class="badge b-fail">Failed</span>';
+
+  /* Always show play for saved sessions so archives are reachable (legacy skribby_audio_* matched on server by time). */
+  const showPlay = s.bot_session_id != null;
+  const playBtn = showPlay
+    ? `<button type="button" class="sum-play${s.recording_available ? '' : ' muted'}" title="${s.recording_available ? 'Play meeting recording' : 'Try play — if no file is archived you will see an error'}" aria-label="Play recording" onclick="event.stopPropagation();openMeetingRecording('${domId}',${Number(s.bot_session_id)})">▶</button>`
+    : '';
+
+  const kp = parseJsonArray(s.key_points);
+  const ai = parseJsonArray(s.action_items);
+
+  const bodyCompleted = `
+    ${s.summary?`<div class="srow"><h4>Summary</h4><p class="stext">${esc(s.summary)}</p></div>`:''}
+    ${kp.length?`<div class="srow"><h4>Key Points</h4><ul class="plist">${kp.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div>`:''}
+    ${ai.length?`<div class="srow"><h4>Action Items</h4><ul class="plist">${ai.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>`:''}
+    ${s.transcript?`<div class="srow"><h4>Transcript</h4><div class="tbox">${esc(s.transcript)}</div></div>`:''}
+  `;
+
+  const body = transcriptOnly
+    ? (s.transcript
+      ? `<div class="srow"><h4>Transcript</h4><div class="tbox">${esc(s.transcript)}</div></div><p class="stext" style="margin-top:12px;color:var(--muted2)">No AI summary yet — click <strong>Summarize</strong> on the session or enable automatic summaries.</p>`
+      : `<div class="srow"><p class="stext" style="color:var(--muted2)">No content.</p></div>`)
+    : s.status==='completed'
+    ? bodyCompleted
+    : s.status==='processing'
+    ? `<div class="srow"><p class="stext" style="color:var(--muted2)">Summary is being generated. Refresh in a moment.</p></div>`
+    : `<div class="srow"><p class="stext" style="color:var(--red)">${esc(s.error_message||'Failed')}</p></div>`;
+
+  return `<div class="sum-card" id="${domId}">
+    <div class="sum-media-holder" id="mw-${domId}" style="display:none" onclick="event.stopPropagation()"></div>
+    <div class="sum-hd" onclick="toggleSum('${domId}')">
+      <div class="sum-ic">✦</div>
+      <div>
+        <div class="sum-title">${esc(s.display_title || s.headline || s.meeting_title || 'Meeting')}</div>
+        <div class="sum-date">🤖 ${esc(s.bot_name||'AI Notetaker')} · ${esc(date)}</div>
+      </div>
+      <div class="sum-r">${playBtn}${badge}<span class="chev">▾</span></div>
+    </div>
+    <div class="sum-body">${body}</div>
+  </div>`;
+}
+
+async function openMeetingRecording(domId, sessionId){
+  const wrap = document.getElementById('mw-'+domId);
+  if(!wrap || !tok) return toast('Sign in required','err');
+  if(wrap.dataset.loading === '1') return;
+  if(wrap.dataset.ready === '1'){
+    const el = wrap.querySelector('video,audio');
+    if(el){
+      wrap.style.display = 'block';
+      el.play().catch(()=>{});
+      if(!document.getElementById(domId).classList.contains('open')) toggleSum(domId);
+      return;
+    }
+  }
+  wrap.dataset.loading = '1';
+  wrap.style.display = 'block';
+  wrap.innerHTML = '<div class="loading"><div class="spin"></div>Loading media…</div>';
+  if(!document.getElementById(domId).classList.contains('open')) toggleSum(domId);
+  try{
+    const res = await fetch(API + '/skribby/bot-session/' + sessionId + '/recording', {
+      headers: { Authorization: 'Bearer ' + tok }
+    });
+    let errMsg = 'Recording unavailable';
+    if(!res.ok){
+      try{ const j = await res.json(); if(j.error) errMsg = j.error; }catch(_){}
+      throw new Error(errMsg);
+    }
+    const blob = await res.blob();
+    const ct = (res.headers.get('content-type') || blob.type || '').toLowerCase();
+    const isVideo = ct.startsWith('video/') || (blob.type && blob.type.startsWith('video/'));
+    const url = URL.createObjectURL(blob);
+    wrap.innerHTML = '';
+    const media = document.createElement(isVideo ? 'video' : 'audio');
+    media.controls = true;
+    media.preload = 'metadata';
+    if(isVideo){
+      media.style.width = '100%';
+      media.style.maxHeight = '240px';
+      media.style.borderRadius = '8px';
+    }
+    media.src = url;
+    wrap.appendChild(media);
+    wrap.dataset.ready = '1';
+    media.play().catch(()=>{});
+  }catch(e){
+    wrap.innerHTML = '';
+    wrap.style.display = 'none';
+    delete wrap.dataset.ready;
+    toast(e.message || 'Playback failed', 'err');
+  }finally{
+    delete wrap.dataset.loading;
+  }
+}
+
+function toggleSum(id){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+}
+
+// ── SCHEDULED MEETINGS (Zoom + Google Calendar + Microsoft Graph) ──
+async function loadMeetingsHub(){
+  const el = document.getElementById('meetings-hub-area');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Loading connections...</div>';
+  try {
+    const zSt = await zoomStatusSafe();
+    const gSt = await googleStatusSafe();
+    const mSt = await microsoftStatusSafe();
+
+    const zoomBlock = zSt.connected
+      ? `<div class="int-card"><h4>🎥 Zoom</h4><p>${esc(zSt.email||'Connected')}</p><button class="btn-disc" onclick="disconnectZoom()">Disconnect</button>
+         <div style="margin-top:12px"><span class="sec-hd" style="margin:0">Zoom only</span>
+         <div class="mtabs" style="margin-top:8px">
+           <button class="mtab on" onclick="loadZoomOnly('upcoming',this)">Upcoming</button>
+           <button class="mtab" onclick="loadZoomOnly('live',this)">Live</button>
+           <button class="mtab" onclick="loadZoomOnly('previous_meetings',this)">Past</button>
+         </div><div id="zoom-only-list" style="margin-top:10px"></div></div></div>`
+      : `<div class="int-card"><h4>🎥 Zoom</h4><p>List meetings from your Zoom account.</p><button class="btn-zoom" onclick="connectZoom()">Connect Zoom</button></div>`;
+
+    const googleBlock = gSt.connected
+      ? `<div class="int-card"><h4>📗 Google Calendar</h4><p>${esc(gSt.email||'Connected')}</p><button class="btn-disc" onclick="disconnectGoogle()">Disconnect</button></div>`
+      : `<div class="int-card"><h4>📗 Google Calendar</h4><p>Events with Google Meet links (Calendar API).</p><button class="btn-gcal" onclick="connectGoogle()">Connect Google</button></div>`;
+
+    const msBlock = mSt.connected
+      ? `<div class="int-card"><h4>💜 Microsoft 365</h4><p>${esc(mSt.email||'Connected')}</p><button class="btn-disc" onclick="disconnectMicrosoft()">Disconnect</button></div>`
+      : `<div class="int-card"><h4>💜 Microsoft 365</h4><p>Calendar events with Teams meetings (Graph).</p><button class="btn-m365" onclick="connectMicrosoft()">Connect Microsoft</button></div>`;
+
+    el.innerHTML = `
+      <div class="int-grid">${zoomBlock}${googleBlock}${msBlock}</div>
+      <div class="sec-hd" style="align-items:center">Unified upcoming <button class="abtn-sm abtn-ref" onclick="loadUnifiedMeetings()">↻ Refresh list</button></div>
+      <p class="hint" style="margin-bottom:12px">Loads Zoom, Google, and Microsoft calendars, saves meetings with join links, and registers Skribby bots automatically (Skribby joins at start time — no cron here). See <code style="font-size:11px">docs/SCHEDULED_MEETINGS_INTEGRATION.md</code> for OAuth setup.</p>
+      <div id="unified-meetings-list"><div class="loading"><div class="spin"></div>Loading unified list...</div></div>`;
+
+    if(zSt.connected) loadZoomOnly('upcoming', null);
+    loadUnifiedMeetings();
+  } catch(e){
+    el.innerHTML=`<div class="empty"><p>Error: ${e.message}</p></div>`;
+  }
+}
+
+async function zoomStatusSafe(){
+  try{ const r=await req('/zoom/status'); return { connected:r.connected, email:r.zoomUser?.email }; }catch{ return { connected:false }; }
+}
+async function googleStatusSafe(){
+  try{ const r=await req('/google/status'); return { connected:r.connected, email:r.user?.email }; }catch{ return { connected:false }; }
+}
+async function microsoftStatusSafe(){
+  try{ const r=await req('/microsoft/status'); return { connected:r.connected, email:r.user?.email }; }catch{ return { connected:false }; }
+}
+
+async function connectZoom(){
+  try{ const r=await req('/zoom/connect'); location.href=r.url; }catch(e){ toast(e.message,'err'); }
+}
+async function disconnectZoom(){
+  if(!confirm('Disconnect Zoom?')) return;
+  await req('/zoom/disconnect','DELETE');
+  toast('Zoom disconnected','inf');
+  loadMeetingsHub();
+}
+async function connectGoogle(){
+  try{ const r=await req('/google/connect'); location.href=r.url; }
+  catch(e){ toast(e.message||'Google OAuth not configured','err'); }
+}
+async function disconnectGoogle(){
+  if(!confirm('Disconnect Google?')) return;
+  await req('/google/disconnect','DELETE');
+  toast('Google disconnected','inf');
+  loadMeetingsHub();
+}
+async function connectMicrosoft(){
+  try{ const r=await req('/microsoft/connect'); location.href=r.url; }
+  catch(e){ toast(e.message||'Microsoft OAuth not configured','err'); }
+}
+async function disconnectMicrosoft(){
+  if(!confirm('Disconnect Microsoft?')) return;
+  await req('/microsoft/disconnect','DELETE');
+  toast('Microsoft disconnected','inf');
+  loadMeetingsHub();
+}
+
+async function loadZoomOnly(type, tabEl){
+  if(tabEl){
+    const box = tabEl.parentElement;
+    box.querySelectorAll('.mtab').forEach(t=>t.classList.remove('on'));
+    tabEl.classList.add('on');
+  }
+  const el = document.getElementById('zoom-only-list');
+  if(!el) return;
+  el.innerHTML='<div class="loading"><div class="spin"></div>Zoom...</div>';
+  try{
+    const r = await req(`/zoom/meetings?type=${type}`);
+    if(!r.meetings?.length){ el.innerHTML='<p class="muted-inline">No meetings.</p>'; return; }
+    el.innerHTML='<div class="sess-list">'+r.meetings.map(renderZoomMeetCard).join('')+'</div>';
+  }catch(e){ el.innerHTML=`<p class="muted-inline">${e.message}</p>`; }
+}
+
+function renderZoomMeetCard(m){
+  const date  = m.start_time ? new Date(m.start_time).toLocaleString() : 'TBD';
+  const joinUrl = m.join_url || '';
+  const topic = m.topic||'Untitled';
+  const btn = joinUrl
+    ? `<button class="btn-bot" onclick="prefillBotEnc('${encodeURIComponent(joinUrl)}','${encodeURIComponent(topic)}')">🤖 Send Bot</button>`
+    : '<span class="muted-inline">No join link</span>';
+  return `<div class="meet-card">
+    <div class="meet-ic">🎥</div>
+    <div class="meet-info">
+      <div class="meet-topic"><span class="plat-badge">Zoom</span>${esc(topic)}</div>
+      <div class="meet-meta"><span>📅 ${date}</span>${m.duration?`<span>⏱ ${m.duration}min</span>`:''}</div>
+    </div>${btn}</div>`;
+}
+
+async function loadUnifiedMeetings(){
+  const el = document.getElementById('unified-meetings-list');
+  if(!el) return;
+  el.innerHTML='<div class="loading"><div class="spin"></div>Loading...</div>';
+  try{
+    const r = await req('/meetings/upcoming?days=14&auto_schedule=true');
+    if(r.errors?.length) console.warn('meetings hub partial errors', r.errors);
+    if(!r.merged?.length){
+      el.innerHTML='<div class="empty"><div class="empty-ic">📅</div><p>No upcoming meetings with join links from connected accounts.<br>Connect a provider above or paste a URL on Send Bot.</p></div>';
+      return;
+    }
+    el.innerHTML='<div class="sess-list">'+r.merged.map(renderHubMeetCard).join('')+'</div>';
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
+}
+
+function renderHubMeetCard(m){
+  const plat = m.platform||'zoom';
+  const label = plat==='google_meet'?'Meet':plat==='teams'?'Teams':plat==='conference'?'Video':plat==='zoom'?'Zoom':'Video';
+  const ic = plat==='google_meet'?'📗':plat==='teams'?'💜':'🎥';
+  const start = m.start || m.start_time;
+  const date = start ? new Date(start).toLocaleString() : 'TBD';
+  const title = m.title || m.topic || 'Untitled';
+  const ju = m.join_url||'';
+  const startUnix = (() => {
+    if (m.start_unix != null && Number.isFinite(Number(m.start_unix))) return Number(m.start_unix);
+    if (!start) return null;
+    const t = Math.floor(new Date(start).getTime() / 1000);
+    return Number.isFinite(t) ? t : null;
+  })();
+  const future = start && new Date(start) > new Date();
+  const hasAuto = Boolean(m.auto_bot_id);
+  const autoBadge = hasAuto
+    ? `<div class="muted-inline" style="margin-top:6px">✓ Notetaker scheduled (Skribby)</div>`
+    : (m.auto_schedule_error
+      ? `<div class="muted-inline" style="margin-top:6px;color:var(--red)">Auto-schedule: ${esc(String(m.auto_schedule_error).slice(0,120))}</div>`
+      : '');
+  const btnNow = ju && !hasAuto
+    ? `<button class="btn-bot" onclick="prefillBotEnc('${encodeURIComponent(ju)}','${encodeURIComponent(title)}')">🤖 Send now (manual)</button>`
+    : ju && hasAuto
+    ? '<span class="muted-inline">Using auto-scheduled bot</span>'
+    : '<span class="muted-inline">No join link</span>';
+  const btnSched = ju && future && startUnix && !hasAuto
+    ? `<button class="btn-bot" style="margin-top:8px" onclick="prefillScheduleEnc('${encodeURIComponent(ju)}','${encodeURIComponent(title)}',${startUnix})">⏰ Schedule manually</button>`
+    : '';
+  return `<div class="meet-card">
+    <div class="meet-ic">${ic}</div>
+    <div class="meet-info">
+      <div class="meet-topic"><span class="plat-badge">${label}</span>${esc(title)}</div>
+      <div class="meet-meta"><span>📅 ${date}</span></div>
+      ${autoBadge}
+    </div><div>${btnNow}${btnSched}</div></div>`;
+}
+
+function prefillBotEnc(encUrl, encTitle){
+  prefillBot(decodeURIComponent(encUrl), decodeURIComponent(encTitle));
+}
+function toDatetimeLocalFromUnix(sec){
+  const d = new Date(sec * 1000);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function prefillBot(url, title){
+  document.getElementById('botUrl').value   = url;
+  document.getElementById('botTitle').value = title;
+  const sch = document.getElementById('botSchedule');
+  if (sch) sch.value = '';
+  go('bot', document.querySelectorAll('.si')[1]);
+  toast('Meeting URL pre-filled — click Send Bot 🚀','inf');
+}
+function prefillScheduleEnc(encUrl, encTitle, startUnix){
+  const url = decodeURIComponent(encUrl);
+  const title = decodeURIComponent(encTitle);
+  document.getElementById('botUrl').value   = url;
+  document.getElementById('botTitle').value = title;
+  const sch = document.getElementById('botSchedule');
+  if (sch) sch.value = toDatetimeLocalFromUnix(startUnix);
+  go('bot', document.querySelectorAll('.si')[1]);
+  toast('Join time set — confirm and Send Bot.','inf');
+}
+
+// ── HELPERS ───────────────────────────────────────────
+async function req(path, method='GET', body=null, auth=true){
+  const opts = { method, headers:{'Content-Type':'application/json'} };
+  if(auth && tok) opts.headers['Authorization'] = 'Bearer '+tok;
+  if(body) opts.body = JSON.stringify(body);
+  const res  = await fetch(API+path, opts);
+  const text = await res.text();
+  let data = {};
+  if (text && text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (!res.ok) throw new Error(text.slice(0, 280) || 'Invalid server response');
+      throw new Error('Invalid JSON from server');
+    }
+  }
+  if(!res.ok) throw new Error(data.error || data.message || data.detail || 'Request failed');
+  return data;
+}
+function v(id){ return document.getElementById(id)?.value||''; }
+function toast(msg, type='inf'){
+  const c = document.getElementById('toast');
+  const d = document.createElement('div');
+  d.className=`ti ${type}`; d.textContent=msg;
+  c.appendChild(d);
+  setTimeout(()=>d.remove(), 4200);
+}
+
+// Auto-refresh sessions every 15s if sessions page is active
+setInterval(()=>{
+  if(document.getElementById('pg-sessions')?.classList.contains('on')) loadSessions();
+}, 15000);
+</script>
+</body>
+</html>
